@@ -61,7 +61,7 @@ class EmbeddingGenerator:
 
     def get_batch(self, er_vocab, er_vocab_pairs, idx):
         batch = er_vocab_pairs[idx:idx + self.batch_size]
-        targets = torch.zeros([len(batch), len(d.entities)], dtype=torch.float32)
+        targets = torch.zeros([len(batch), len(self.data_loader.entities)], dtype=torch.float32)
         if self.cuda:
             targets = targets.cuda()
         for idx, pair in enumerate(batch):
@@ -178,6 +178,56 @@ class EmbeddingGenerator:
         f.close()
         f2.close()
 
+    def validation_step(self, model, best_valid):
+        model.eval()
+        with torch.no_grad():
+            start_test = time.time()
+            print("Validation:")
+            valid = self.evaluate(model, self.data_loader.valid_triples)
+            print("Test:")
+            test = self.evaluate(model, self.data_loader.test_triples)
+            valid_mrr = valid[0]
+            test_mrr = test[0]
+            if valid_mrr >= best_valid[0]:
+                best_valid = valid
+                best_test = test
+                print('Validation MRR increased.')
+                print('Saving model...')
+                # TODO: save embeddings
+                # self.write_embedding_files(model)
+                print('Model saved!')
+
+            print('Best valid:', best_valid)
+            print('Best Test:', best_test)
+            print('Dataset:', self.dataset)
+            print('Model:', self.model)
+
+            print(time.time() - start_test)
+            print(
+                'Learning rate %f | Decay %f | Dim %d | Input drop %f | Hidden drop 2 %f | LS %f | Batch size %d | Loss type %s | L3 reg %f' %
+                (self.learning_rate, self.decay_rate, self.ent_vec_dim, self.kwargs["input_dropout"],
+                 self.kwargs["hidden_dropout2"], self.label_smoothing, self.batch_size,
+                 self.loss_type, self.l3_reg))
+
+    def train_step(self, er_vocab_pairs, er_vocab, opt, model) -> List:
+        losses = []
+        for j in range(0, len(er_vocab_pairs), self.batch_size):
+            data_batch, targets = self.get_batch(er_vocab, er_vocab_pairs, j)
+            opt.zero_grad()
+            e1_idx = torch.tensor(data_batch[:, 0])
+            r_idx = torch.tensor(data_batch[:, 1])
+            if self.cuda:
+                e1_idx = e1_idx.cuda()
+                r_idx = r_idx.cuda()
+            predictions = model.forward(e1_idx, r_idx)
+            if self.label_smoothing:
+                targets = ((1.0 - self.label_smoothing) * targets) + (1.0 / targets.size(1))
+            loss = model.loss(predictions, targets)
+            loss.backward()
+            opt.step()
+            losses.append(loss)
+        return losses
+
     def train_and_eval(self):
         torch.set_num_threads(2)
         best_valid = [0, 0, 0, 0, 0]
@@ -207,61 +257,19 @@ class EmbeddingGenerator:
 
         print("Starting training...")
 
-        for it in range(1, self.num_iterations + 1):
+        for it in tqdm(range(1, self.num_iterations + 1)):
             start_train = time.time()
             model.train()
-            losses = []
             np.random.shuffle(er_vocab_pairs)
-            for j in tqdm(range(0, len(er_vocab_pairs), self.batch_size)):
-                data_batch, targets = self.get_batch(er_vocab, er_vocab_pairs, j)
-                opt.zero_grad()
-                e1_idx = torch.tensor(data_batch[:, 0])
-                r_idx = torch.tensor(data_batch[:, 1])
-                if self.cuda:
-                    e1_idx = e1_idx.cuda()
-                    r_idx = r_idx.cuda()
-                predictions = model.forward(e1_idx, r_idx)
-                if self.label_smoothing:
-                    targets = ((1.0 - self.label_smoothing) * targets) + (1.0 / targets.size(1))
-                loss = model.loss(predictions, targets)
-                loss.backward()
-                opt.step()
-                losses.append(loss.item())
+
+            losses = self.train_step(er_vocab_pairs, er_vocab, opt, model)
+
             if self.decay_rate:
                 scheduler.step()
-            if it % 100 == 0:
-                print('Epoch', it, ' Epoch time', time.time() - start_train, ' Loss:', np.mean(losses))
-            model.eval()
 
-            with torch.no_grad():
-                if it % self.valid_steps == 0:
-                    start_test = time.time()
-                    print("Validation:")
-                    valid = self.evaluate(model, d.valid_triples)
-                    print("Test:")
-                    test = self.evaluate(model, d.test_triples)
-                    valid_mrr = valid[0]
-                    test_mrr = test[0]
-                    if valid_mrr >= best_valid[0]:
-                        best_valid = valid
-                        best_test = test
-                        print('Validation MRR increased.')
-                        print('Saving model...')
-                        # self.write_embedding_files(model)
-                        print('Model saved!')
-
-                    print('Best valid:', best_valid)
-                    print('Best Test:', best_test)
-                    print('Dataset:', self.dataset)
-                    print('Model:', self.model)
-
-                    print(time.time() - start_test)
-                    print(
-                        'Learning rate %f | Decay %f | Dim %d | Input drop %f | Hidden drop 2 %f | LS %f | Batch size %d | Loss type %s | L3 reg %f' %
-                        (self.learning_rate, self.decay_rate, self.ent_vec_dim, self.kwargs["input_dropout"],
-                         self.kwargs["hidden_dropout2"], self.label_smoothing, self.batch_size,
-                         self.loss_type, self.l3_reg))
-
+            if it % self.valid_steps == 0:
+                print(f'Epoch:{it} Epoch time:{time.time() - start_train}, Loss:{np.mean(losses)}')
+                self.validation_step(model, best_valid)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
