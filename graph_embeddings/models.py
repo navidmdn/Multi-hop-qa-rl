@@ -12,6 +12,7 @@ class TuckER(torch.nn.Module):
         self.model = kwargs["model"]
         multiplier = 3
         self.loss_type = kwargs['loss_type']
+        self.device = kwargs['device'] if 'device' in kwargs else 'cpu'
 
         if self.loss_type == 'BCE':
             # self.loss = torch.nn.BCELoss()
@@ -38,7 +39,7 @@ class TuckER(torch.nn.Module):
             self.score_func = self.TuckER
             multiplier = 1
             self.W = torch.nn.Parameter(torch.tensor(np.random.uniform(-1, 1, (d2, d1, d1)),
-                                                     dtype=torch.float, device="cuda", requires_grad=True))
+                                                     dtype=torch.float, device=self.device, requires_grad=True))
         else:
             print('Incorrect model specified:', self.model)
             exit(0)

@@ -9,15 +9,16 @@ import argparse
 from tqdm import tqdm
 import os
 
-from typing import Tuple, List, Dict
+from typing import List, Dict
+
 
 class EmbeddingGenerator:
 
-    def __init__(self, learning_rate=0.0005, ent_vec_dim=200, rel_vec_dim=200,
+    def __init__(self, dataset, learning_rate=0.0005, ent_vec_dim=200, rel_vec_dim=200,
                  num_iterations=500, batch_size=128, decay_rate=0., cuda=False,
                  input_dropout=0.3, hidden_dropout1=0.4, hidden_dropout2=0.5,
                  label_smoothing=0., outfile='tucker.model', valid_steps=1, loss_type='BCE', do_batch_norm=1,
-                 dataset='', model='Rotat3', l3_reg=0.0, load_from=''):
+                 model='Rotat3', l3_reg=0.0, load_from=''):
         self.dataset = dataset
         self.learning_rate = learning_rate
         self.ent_vec_dim = ent_vec_dim
@@ -49,7 +50,7 @@ class EmbeddingGenerator:
         rel_idxs = self.data_loader.relation_idxs
 
         triple_idxs = [(entity_idxs[triple[0]], rel_idxs[triple[1]], entity_idxs[triple[2]])
-                     for triple in triples]
+                       for triple in triples]
         return triple_idxs
 
     @staticmethod
@@ -72,6 +73,8 @@ class EmbeddingGenerator:
         model.eval()
         hits = [[] for _ in range(10)]
         ranks = []
+
+        #TODO: its being called every time
         test_data_idxs = self.get_triple_idxs(data)
         er_vocab = self.get_er_vocab(test_data_idxs)
 
@@ -211,7 +214,7 @@ class EmbeddingGenerator:
 
     def train_step(self, er_vocab_pairs, er_vocab, opt, model) -> List:
         losses = []
-        for j in range(0, len(er_vocab_pairs), self.batch_size):
+        for j in tqdm(range(0, len(er_vocab_pairs), self.batch_size)):
             data_batch, targets = self.get_batch(er_vocab, er_vocab_pairs, j)
             opt.zero_grad()
             e1_idx = torch.tensor(data_batch[:, 0])
@@ -231,14 +234,13 @@ class EmbeddingGenerator:
     def train_and_eval(self):
         torch.set_num_threads(2)
         best_valid = [0, 0, 0, 0, 0]
-        best_test = [0, 0, 0, 0, 0]
 
         train_triple_idxs = self.get_triple_idxs(self.data_loader.train_triples)
         print("Number of training data points: %d" % len(train_triple_idxs))
         print('Entities: %d' % len(self.data_loader.entity_idxs))
         print('Relations: %d' % len(self.data_loader.relation_idxs))
 
-        model = TuckER(d, self.ent_vec_dim, self.rel_vec_dim, **self.kwargs)
+        model = TuckER(self.data_loader, self.ent_vec_dim, self.rel_vec_dim, **self.kwargs)
         model.init()
 
         if self.load_from != '':
@@ -257,7 +259,8 @@ class EmbeddingGenerator:
 
         print("Starting training...")
 
-        for it in tqdm(range(1, self.num_iterations + 1)):
+        for it in range(1, self.num_iterations + 1):
+            print(f"iteration: {it}")
             start_train = time.time()
             model.train()
             np.random.shuffle(er_vocab_pairs)
@@ -271,17 +274,18 @@ class EmbeddingGenerator:
                 print(f'Epoch:{it} Epoch time:{time.time() - start_train}, Loss:{np.mean(losses)}')
                 self.validation_step(model, best_valid)
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="FB15k-237", nargs="?",
-                        help="Which dataset to use: FB15k, FB15k-237, WN18 or WN18RR.")
+    parser.add_argument("--dataset", type=str, default="MetaQA", nargs="?",
+                        help="Which dataset to use")
     parser.add_argument("--num_iterations", type=int, default=500, nargs="?",
                         help="Number of iterations.")
     parser.add_argument("--batch_size", type=int, default=128, nargs="?",
                         help="Batch size.")
     parser.add_argument("--lr", type=float, default=0.0005, nargs="?",
                         help="Learning rate.")
-    parser.add_argument("--model", type=str, default='Rotat3', nargs="?",
+    parser.add_argument("--model", type=str, default='TuckER', nargs="?",
                         help="Model.")
     parser.add_argument("--dr", type=float, default=1.0, nargs="?",
                         help="Decay rate.")
@@ -313,22 +317,27 @@ if __name__ == '__main__':
                         help="load from state dict")
 
     args = parser.parse_args()
-    dataset = args.dataset
-    data_dir = "../data/%s/" % dataset
     torch.backends.cudnn.deterministic = True
     seed = 20
     np.random.seed(seed)
     torch.manual_seed(seed)
+
     if torch.cuda.is_available:
+        print("operating on gpu")
         torch.cuda.manual_seed_all(seed)
-    d = Data(data_dir=data_dir, reverse=True)
-    experiment = Experiment(num_iterations=args.num_iterations, batch_size=args.batch_size, learning_rate=args.lr,
-                            decay_rate=args.dr, ent_vec_dim=args.edim, rel_vec_dim=args.rdim, cuda=args.cuda,
-                            input_dropout=args.input_dropout, hidden_dropout1=args.hidden_dropout1,
-                            hidden_dropout2=args.hidden_dropout2, label_smoothing=args.label_smoothing,
-                            outfile=args.outfile,
-                            valid_steps=args.valid_steps, loss_type=args.loss_type, do_batch_norm=args.do_batch_norm,
-                            dataset=args.dataset, model=args.model, l3_reg=args.l3_reg, load_from=args.load_from)
-    experiment.train_and_eval()
+    else:
+        print("operating on cpu")
 
-
+    embedding_generator = EmbeddingGenerator(
+        dataset=args.dataset,
+        num_iterations=args.num_iterations,
+        batch_size=args.batch_size,
+        learning_rate=args.lr,
+        decay_rate=args.dr, ent_vec_dim=args.edim, rel_vec_dim=args.rdim, cuda=args.cuda,
+        input_dropout=args.input_dropout, hidden_dropout1=args.hidden_dropout1,
+        hidden_dropout2=args.hidden_dropout2, label_smoothing=args.label_smoothing,
+        outfile=args.outfile,
+        valid_steps=args.valid_steps, loss_type=args.loss_type, do_batch_norm=args.do_batch_norm,
+        model=args.model, l3_reg=args.l3_reg, load_from=args.load_from
+    )
+    embedding_generator.train_and_eval()
