@@ -1,44 +1,13 @@
 import torch
 from torch.nn.init import xavier_normal_
-import torch.nn as nn
 import torch.nn.functional as F
-from graph_embeddings.models.simple import SimplE
-from graph_embeddings.models.complex import ComplEx
-from graph_embeddings.models.rescal import Rescal
-from graph_embeddings.models.tucker import TuckER
-from graph_embeddings.models.dist_mult import DistMult
+
 from abc import abstractmethod
-
-
-class EmbeddingModelFactory:
-    def __init__(self, model_name):
-        self.model_name = model_name
-
-    def create(self, data_loader, entity_dim, rel_dim, loss_type, device, do_batch_norm, **kwargs):
-        if self.model_name == 'DistMult':
-            print("building distmult model for embedding generation")
-            embedding_model = DistMult(data_loader, entity_dim, rel_dim, loss_type, device, do_batch_norm, **kwargs)
-        elif self.model_name == 'SimplE':
-            print("building simple model for embedding generation")
-            embedding_model = SimplE(data_loader, entity_dim, rel_dim, loss_type, device, do_batch_norm, **kwargs)
-        elif self.model_name == 'ComplEx':
-            print("building complex model for embedding generation")
-            embedding_model = ComplEx(data_loader, entity_dim, rel_dim, loss_type, device, do_batch_norm, **kwargs)
-        elif self.model_name == 'RESCAL':
-            print("building rescal model for embedding generation")
-            embedding_model = Rescal(data_loader, entity_dim, rel_dim, loss_type, device, do_batch_norm, **kwargs)
-        elif self.model_name == 'TuckER':
-            print("building tucker model for embedding generation")
-            embedding_model = TuckER(data_loader, entity_dim, rel_dim, loss_type, device, do_batch_norm, **kwargs)
-        else:
-            raise NotImplementedError("Wrong model name!")
-
-        return embedding_model
 
 
 class EmbeddingModel(torch.nn.Module):
     def __init__(self, data_loader, entity_dim, rel_dim,
-                 loss_type, device='cpu', do_batch_norm=True ,**kwargs):
+                 loss_type, device='cpu', do_batch_norm=True, **kwargs):
         super(EmbeddingModel, self).__init__()
 
         self.loss_type = loss_type
@@ -55,9 +24,6 @@ class EmbeddingModel(torch.nn.Module):
             self.loss = self.ce_loss
         else:
             raise NotImplementedError(f'Incorrect loss specified: {self.loss_type}')
-
-        self.E = self.create_entity_embeddings()
-        self.R = self.create_relation_embeddings()
 
         self.input_dropout = torch.nn.Dropout(kwargs["input_dropout"])
         self.hidden_dropout1 = torch.nn.Dropout(kwargs["hidden_dropout1"])

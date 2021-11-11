@@ -16,6 +16,9 @@ class DistMult(EmbeddingModel):
         self.bn1 = torch.nn.BatchNorm1d(entity_dim * self.multiplier)
         self.bn2 = torch.nn.BatchNorm1d(entity_dim * self.multiplier)
 
+        self.E = self.create_entity_embeddings()
+        self.R = self.create_relation_embeddings()
+
     def calculate_score(self, head, relation):
         if self.do_batch_norm:
             head = self.bn0(head)

@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import time
 from collections import defaultdict
-from graph_embeddings.models.embedding_model import EmbeddingModelFactory
+from graph_embeddings.models.factory import EmbeddingModelFactory
 from torch.optim.lr_scheduler import ExponentialLR
 import argparse
 from tqdm import tqdm
@@ -330,7 +330,7 @@ if __name__ == '__main__':
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    if torch.cuda.is_available:
+    if torch.cuda.is_available and args.cuda:
         print("operating on gpu")
         torch.cuda.manual_seed_all(seed)
     else:

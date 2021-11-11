@@ -16,6 +16,9 @@ class Rescal(EmbeddingModel):
         self.bn1 = torch.nn.BatchNorm1d(entity_dim * self.multiplier)
         self.bn2 = torch.nn.BatchNorm1d(entity_dim * self.multiplier)
 
+        self.E = self.create_entity_embeddings()
+        self.R = self.create_relation_embeddings()
+
     def create_relation_embeddings(self):
         return torch.nn.Embedding(len(self.data_loader.relations), self.entity_dim * self.entity_dim, padding_idx=0)
 

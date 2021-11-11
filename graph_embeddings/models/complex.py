@@ -16,6 +16,9 @@ class ComplEx(EmbeddingModel):
         self.bn1 = torch.nn.BatchNorm1d(self.multiplier)
         self.bn2 = torch.nn.BatchNorm1d(self.multiplier)
 
+        self.E = self.create_entity_embeddings()
+        self.R = self.create_relation_embeddings()
+
     def calculate_score(self, head, relation):
         head = torch.stack(list(torch.chunk(head, 2, dim=1)), dim=1)
         if self.do_batch_norm:

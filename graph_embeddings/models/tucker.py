@@ -16,7 +16,8 @@ class TuckER(EmbeddingModel):
         self.bn0 = torch.nn.BatchNorm1d(entity_dim * self.multiplier)
         self.bn1 = torch.nn.BatchNorm1d(entity_dim * self.multiplier)
         self.bn2 = torch.nn.BatchNorm1d(entity_dim * self.multiplier)
-
+        self.E = self.create_entity_embeddings()
+        self.R = self.create_relation_embeddings()
         self.W = torch.nn.Parameter(
             torch.tensor(np.random.uniform(-1, 1, (rel_dim, entity_dim, entity_dim)),
             dtype=torch.float, device=self.device, requires_grad=True)
