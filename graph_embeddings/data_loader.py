@@ -1,9 +1,9 @@
-import os
+from os.path import join, abspath, dirname
 
 
 class DataLoader:
 
-    base_data_dir = '../data'
+    base_data_dir = join(dirname(dirname(abspath(__file__))), 'data')
 
     def __init__(self, dataset="MetaQA", reverse_rel=False):
         """
@@ -13,7 +13,7 @@ class DataLoader:
         """
 
         self.entity_idxs = self.relation_idxs = None
-        self.data_dir = os.path.join(self.base_data_dir, dataset)
+        self.data_dir = join(self.base_data_dir, dataset)
         self.train_triples = self.load_triples("train", reverse_rel=reverse_rel)[:1000]
         self.valid_triples = self.load_triples("valid", reverse_rel=reverse_rel)[:1000]
         self.test_triples = self.load_triples("test", reverse_rel=reverse_rel)[:1000]
@@ -27,7 +27,7 @@ class DataLoader:
 
     def load_triples(self, data_type="train", reverse_rel=False):
 
-        with open(os.path.join(self.data_dir, f"{data_type}.txt"), "r") as f:
+        with open(join(self.data_dir, f"{data_type}.txt"), "r") as f:
             data = f.read().strip().split("\n")
             data = [i.split('\t') for i in data]
             if reverse_rel:
@@ -39,11 +39,11 @@ class DataLoader:
         self.entity_idxs = {self.entities[i]: i for i in range(len(self.entities))}
         self.relation_idxs = {self.relations[i]: i for i in range(len(self.relations))}
 
-        with open(os.path.join(self.data_dir, 'entities.dict'), 'w') as f:
+        with open(join(self.data_dir, 'entities.dict'), 'w') as f:
             for key, value in self.entity_idxs.items():
                 f.write(key + '\t' + str(value) + '\n')
 
-        with open(os.path.join(self.data_dir, 'relations.dict'), 'w') as f:
+        with open(join(self.data_dir, 'relations.dict'), 'w') as f:
             for key, value in self.relation_idxs.items():
                 f.write(key + '\t' + str(value) + '\n')
 
