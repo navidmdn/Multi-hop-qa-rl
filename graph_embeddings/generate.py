@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import time
 from collections import defaultdict
-from graph_embeddings.models import *
+from graph_embeddings.models.embedding_model import EmbeddingModelFactory
 from torch.optim.lr_scheduler import ExponentialLR
 import argparse
 from tqdm import tqdm
@@ -20,6 +20,7 @@ class EmbeddingGenerator:
                  label_smoothing=0., outfile='tucker.model', valid_steps=1, loss_type='BCE', do_batch_norm=1,
                  model='Rotat3', l3_reg=0.0, load_from=''):
         self.dataset = dataset
+
         self.learning_rate = learning_rate
         self.ent_vec_dim = ent_vec_dim
         self.rel_vec_dim = rel_vec_dim
@@ -30,7 +31,7 @@ class EmbeddingGenerator:
         self.cuda = cuda
         self.outfile = outfile
         self.valid_steps = valid_steps
-        self.model = model
+        self.model_name = model
         self.l3_reg = l3_reg
         self.loss_type = loss_type
         self.load_from = load_from
@@ -39,11 +40,14 @@ class EmbeddingGenerator:
         else:
             do_batch_norm = False
         self.kwargs = {"input_dropout": input_dropout, "hidden_dropout1": hidden_dropout1,
-                       "hidden_dropout2": hidden_dropout2, "model": model, "loss_type": loss_type,
-                       "do_batch_norm": do_batch_norm, "l3_reg": l3_reg}
+                       "hidden_dropout2": hidden_dropout2, "l3_reg": l3_reg}
 
         # TODO: configurable reverse rel
         self.data_loader = DataLoader(dataset=self.dataset, reverse_rel=True)
+        device = 'cpu' if not self.cuda else 'cuda'
+        self.model = EmbeddingModelFactory(self.model_name).create(
+            self.data_loader, self.ent_vec_dim, rel_vec_dim, self.loss_type, device, do_batch_norm, **self.kwargs
+        )
 
     def get_triple_idxs(self, triples: List) -> List:
         entity_idxs = self.data_loader.entity_idxs
@@ -130,7 +134,7 @@ class EmbeddingGenerator:
         model.eval()
         model_folder = "../kg_embeddings/%s/" % self.dataset
         data_folder = "../data/%s/" % self.dataset
-        embedding_type = self.model
+        embedding_type = self.model_name
         if os.path.exists(model_folder) == False:
             os.mkdir(model_folder)
         R_numpy = model.R.weight.data.cpu().numpy()
@@ -207,7 +211,7 @@ class EmbeddingGenerator:
             print('Best valid:', best_valid)
             print('Best Test:', best_test)
             print('Dataset:', self.dataset)
-            print('Model:', self.model)
+            print('Model:', self.model_name)
 
             print(time.time() - start_test)
             print(
@@ -244,7 +248,7 @@ class EmbeddingGenerator:
         print('Entities: %d' % len(self.data_loader.entity_idxs))
         print('Relations: %d' % len(self.data_loader.relation_idxs))
 
-        model = TuckER(self.data_loader, self.ent_vec_dim, self.rel_vec_dim, **self.kwargs)
+        model = self.model
         model.init()
 
         if self.load_from != '':
