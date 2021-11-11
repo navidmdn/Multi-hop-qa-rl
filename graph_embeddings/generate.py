@@ -236,7 +236,7 @@ class EmbeddingGenerator:
             loss = model.loss(predictions, targets)
             loss.backward()
             opt.step()
-            losses.append(loss)
+            losses.append(loss.detach().cpu().numpy())
         return losses
 
     def train_and_eval(self):
@@ -287,7 +287,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="MetaQA", nargs="?",
                         help="Which dataset to use")
-    parser.add_argument("--num_iterations", type=int, default=500, nargs="?",
+    parser.add_argument("--num_iterations", type=int, default=10, nargs="?",
                         help="Number of iterations.")
     parser.add_argument("--batch_size", type=int, default=128, nargs="?",
                         help="Batch size.")
