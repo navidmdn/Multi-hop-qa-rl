@@ -79,6 +79,7 @@ class EmbeddingGenerator:
         er_vocab = self.get_er_vocab(test_data_idxs)
 
         print("Number of data points: %d" % len(test_data_idxs))
+        # TODO: reuse get_batch function
         for i in tqdm(range(0, len(test_data_idxs), self.batch_size)):
             data_batch = np.array(test_data_idxs[i: i + self.batch_size])
             e1_idx = torch.tensor(data_batch[:, 0])
@@ -91,6 +92,7 @@ class EmbeddingGenerator:
             predictions = model.forward(e1_idx, r_idx)
 
             # following lines commented means RAW evaluation (not filtered)
+            # todo: whats this filtering?
             for j in range(data_batch.shape[0]):
                 filt = er_vocab[(data_batch[j][0], data_batch[j][1])]
                 target_value = predictions[j, e2_idx[j]].item()
@@ -100,6 +102,7 @@ class EmbeddingGenerator:
             sort_values, sort_idxs = torch.sort(predictions, dim=1, descending=True)
             sort_idxs = sort_idxs.cpu().numpy()
             for j in range(data_batch.shape[0]):
+                # kth rank of prediction matches target -> rank
                 rank = np.where(sort_idxs[j] == e2_idx[j].item())[0][0]
                 ranks.append(rank + 1)
 
@@ -113,12 +116,14 @@ class EmbeddingGenerator:
         hitat3 = np.mean(hits[2])
         hitat1 = np.mean(hits[0])
         meanrank = np.mean(ranks)
+
         mrr = np.mean(1. / np.array(ranks))
         print('Hits @10: {0}'.format(hitat10))
         print('Hits @3: {0}'.format(hitat3))
         print('Hits @1: {0}'.format(hitat1))
         print('Mean rank: {0}'.format(meanrank))
         print('Mean reciprocal rank: {0}'.format(mrr))
+
         return [mrr, meanrank, hitat10, hitat3, hitat1]
 
     def write_embedding_files(self, model):
@@ -190,7 +195,6 @@ class EmbeddingGenerator:
             print("Test:")
             test = self.evaluate(model, self.data_loader.test_triples)
             valid_mrr = valid[0]
-            test_mrr = test[0]
             if valid_mrr >= best_valid[0]:
                 best_valid = valid
                 best_test = test
