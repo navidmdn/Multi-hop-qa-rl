@@ -1,16 +1,17 @@
-from graph_embeddings.data_loader import DataLoader
-import numpy as np
-import torch
+import argparse
+import os
 import time
 from collections import defaultdict
-from graph_embeddings.models.factory import EmbeddingModelFactory
-from torch.optim.lr_scheduler import ExponentialLR
-import argparse
-from tqdm import tqdm
-import os
-
 from typing import List, Dict
 
+import numpy as np
+import torch
+from torch.optim.lr_scheduler import ExponentialLR
+from tqdm import tqdm
+
+from graph_embeddings.data_loader import DataLoader
+from graph_embeddings.models.factory import EmbeddingModelFactory
+from torch.utils.tensorboard import SummaryWriter
 
 class EmbeddingGenerator:
 
@@ -34,6 +35,8 @@ class EmbeddingGenerator:
         self.l3_reg = l3_reg
         self.loss_type = loss_type
         self.load_from = load_from
+        self.tb_logger = SummaryWriter()
+
         if do_batch_norm == 1:
             do_batch_norm = True
         else:
@@ -133,14 +136,48 @@ class EmbeddingGenerator:
         model_folder = os.path.join(self.data_loader.base_data_dir, f"{self.model_name}_{self.dataset}")
         torch.save(model.state_dict(), model_folder)
 
-    def validation_step(self, model, best_valid):
+    def validation_step(self, model, best_valid, step):
         model.eval()
         with torch.no_grad():
             start_test = time.time()
+
+            print("Train:")
+            train = self.evaluate(model, self.data_loader.train_triples)
             print("Validation:")
             valid = self.evaluate(model, self.data_loader.valid_triples)
             print("Test:")
             test = self.evaluate(model, self.data_loader.test_triples)
+
+            self.tb_logger.add_scalars('Score/mrr', {
+                'train': train[0],
+                'valid': valid[0],
+                'test': test[0]
+            }, step)
+
+            self.tb_logger.add_scalars('Score/meanrank', {
+                'train': train[1],
+                'valid': valid[1],
+                'test': test[1]
+            }, step)
+
+            self.tb_logger.add_scalars('Score/hit10', {
+                'train': train[2],
+                'valid': valid[2],
+                'test': test[2]
+            }, step)
+
+            self.tb_logger.add_scalars('Score/hit3', {
+                'train': train[3],
+                'valid': valid[3],
+                'test': test[3]
+            }, step)
+
+            self.tb_logger.add_scalars('Score/hit1', {
+                'train': train[4],
+                'valid': valid[4],
+                'test': test[4]
+            }, step)
+
             valid_mrr = valid[0]
             if valid_mrr >= best_valid[0]:
                 best_valid = valid
@@ -211,6 +248,9 @@ class EmbeddingGenerator:
 
         for it in range(1, self.num_iterations + 1):
             print(f"iteration: {it}")
+            print(scheduler.get_last_lr())
+            self.tb_logger.add_scalar('training/lr', scheduler.get_last_lr()[0], it)
+
             start_train = time.time()
             model.train()
             np.random.shuffle(er_vocab_pairs)
@@ -221,8 +261,11 @@ class EmbeddingGenerator:
                 scheduler.step()
 
             if it % self.valid_steps == 0:
+                self.tb_logger.add_scalar('training/loss', np.mean(losses), it)
                 print(f'Epoch:{it} Epoch time:{time.time() - start_train}, Loss:{np.mean(losses)}')
-                self.validation_step(model, best_valid)
+                self.validation_step(model, best_valid, it)
+
+        self.tb_logger.close()
 
 
 if __name__ == '__main__':
