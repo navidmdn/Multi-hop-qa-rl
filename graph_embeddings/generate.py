@@ -284,7 +284,7 @@ if __name__ == '__main__':
         decay_rate=args.dr, ent_vec_dim=args.edim, rel_vec_dim=args.rdim, cuda=args.cuda,
         input_dropout=args.input_dropout, hidden_dropout1=args.hidden_dropout1,
         hidden_dropout2=args.hidden_dropout2, label_smoothing=args.label_smoothing,
-        valid_steps=args.valiud_steps, loss_type=args.loss_type, do_batch_norm=args.do_batch_norm,
+        valid_steps=args.valid_steps, loss_type=args.loss_type, do_batch_norm=args.do_batch_norm,
         model=args.model, l3_reg=args.l3_reg, load_from=args.load_from
     )
     embedding_generator.train_and_eval()
