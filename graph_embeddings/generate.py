@@ -19,7 +19,7 @@ class EmbeddingGenerator:
                  num_iterations=500, batch_size=128, decay_rate=0., cuda=False,
                  input_dropout=0.3, hidden_dropout1=0.4, hidden_dropout2=0.5,
                  label_smoothing=0., valid_steps=1, loss_type='BCE', do_batch_norm=1,
-                 model='Rotat3', l3_reg=0.0, load_from=''):
+                 model='TuckER', l3_reg=0.0, load_from=''):
         self.dataset = dataset
 
         self.learning_rate = learning_rate
@@ -35,7 +35,10 @@ class EmbeddingGenerator:
         self.l3_reg = l3_reg
         self.loss_type = loss_type
         self.load_from = load_from
-        self.tb_logger = SummaryWriter()
+        self.tb_logger = SummaryWriter(
+            comment=f"{self.dataset}-{self.model_name}_l3{self.l3_reg}_lr{self.learning_rate}_lrdecay{self.decay_rate}"
+                    f"_batchsize{self.batch_size}_entdim{self.ent_vec_dim}_reldim{self.rel_vec_dim}"
+        )
 
         if do_batch_norm == 1:
             do_batch_norm = True
