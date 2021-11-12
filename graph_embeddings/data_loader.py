@@ -14,7 +14,7 @@ class DataLoader:
 
         self.entity_idxs = self.relation_idxs = None
         self.data_dir = join(self.base_data_dir, dataset)
-        self.train_triples = self.load_triples("train", reverse_rel=reverse_rel)[:500]
+        self.train_triples = self.load_triples("train", reverse_rel=reverse_rel)
         self.valid_triples = self.load_triples("valid", reverse_rel=reverse_rel)
         self.test_triples = self.load_triples("test", reverse_rel=reverse_rel)
         self.data = self.train_triples + self.valid_triples + self.test_triples
