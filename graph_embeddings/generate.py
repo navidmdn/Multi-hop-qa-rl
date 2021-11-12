@@ -17,7 +17,7 @@ class EmbeddingGenerator:
     def __init__(self, dataset, learning_rate=0.0005, ent_vec_dim=200, rel_vec_dim=200,
                  num_iterations=500, batch_size=128, decay_rate=0., cuda=False,
                  input_dropout=0.3, hidden_dropout1=0.4, hidden_dropout2=0.5,
-                 label_smoothing=0., outfile='tucker.model', valid_steps=1, loss_type='BCE', do_batch_norm=1,
+                 label_smoothing=0., valid_steps=1, loss_type='BCE', do_batch_norm=1,
                  model='Rotat3', l3_reg=0.0, load_from=''):
         self.dataset = dataset
 
@@ -29,7 +29,6 @@ class EmbeddingGenerator:
         self.decay_rate = decay_rate
         self.label_smoothing = label_smoothing
         self.cuda = cuda
-        self.outfile = outfile
         self.valid_steps = valid_steps
         self.model_name = model
         self.l3_reg = l3_reg
@@ -254,8 +253,6 @@ if __name__ == '__main__':
                         help="Dropout after the second hidden layer.")
     parser.add_argument("--label_smoothing", type=float, default=0.1, nargs="?",
                         help="Amount of label smoothing.")
-    parser.add_argument("--outfile", type=str, default='tucker.model', nargs="?",
-                        help="File to save")
     parser.add_argument("--valid_steps", type=int, default=1, nargs="?",
                         help="Epochs before u validate")
     parser.add_argument("--loss_type", type=str, default='BCE', nargs="?",
@@ -287,8 +284,7 @@ if __name__ == '__main__':
         decay_rate=args.dr, ent_vec_dim=args.edim, rel_vec_dim=args.rdim, cuda=args.cuda,
         input_dropout=args.input_dropout, hidden_dropout1=args.hidden_dropout1,
         hidden_dropout2=args.hidden_dropout2, label_smoothing=args.label_smoothing,
-        outfile=args.outfile,
-        valid_steps=args.valid_steps, loss_type=args.loss_type, do_batch_norm=args.do_batch_norm,
+        valid_steps=args.valiud_steps, loss_type=args.loss_type, do_batch_norm=args.do_batch_norm,
         model=args.model, l3_reg=args.l3_reg, load_from=args.load_from
     )
     embedding_generator.train_and_eval()
