@@ -131,64 +131,8 @@ class EmbeddingGenerator:
         return [mrr, meanrank, hitat10, hitat3, hitat1]
 
     def write_embedding_files(self, model):
-        model.eval()
-        model_folder = "../kg_embeddings/%s/" % self.dataset
-        data_folder = "../data/%s/" % self.dataset
-        embedding_type = self.model_name
-        if os.path.exists(model_folder) == False:
-            os.mkdir(model_folder)
-        R_numpy = model.R.weight.data.cpu().numpy()
-        E_numpy = model.E.weight.data.cpu().numpy()
-        bn_list = []
-        for bn in [model.bn0, model.bn1, model.bn2]:
-            bn_weight = bn.weight.data.cpu().numpy()
-            bn_bias = bn.bias.data.cpu().numpy()
-            bn_running_mean = bn.running_mean.data.cpu().numpy()
-            bn_running_var = bn.running_var.data.cpu().numpy()
-            bn_numpy = {}
-            bn_numpy['weight'] = bn_weight
-            bn_numpy['bias'] = bn_bias
-            bn_numpy['running_mean'] = bn_running_mean
-            bn_numpy['running_var'] = bn_running_var
-            bn_list.append(bn_numpy)
-
-        if embedding_type == 'TuckER':
-            W_numpy = model.W.detach().cpu().numpy()
-
-        np.save(model_folder + '/E.npy', E_numpy)
-        np.save(model_folder + '/R.npy', R_numpy)
-        for i, bn in enumerate(bn_list):
-            np.save(model_folder + '/bn' + str(i) + '.npy', bn)
-
-        if embedding_type == 'TuckER':
-            np.save(model_folder + '/W.npy', W_numpy)
-
-        f = open(data_folder + '/entities.dict', 'r')
-        f2 = open(model_folder + '/entities.dict', 'w')
-        ents = {}
-        idx2ent = {}
-        for line in f:
-            line = line.rstrip().split('\t')
-            name = line[0]
-            id = int(line[1])
-            ents[name] = id
-            idx2ent[id] = name
-            f2.write(str(id) + '\t' + name + '\n')
-        f.close()
-        f2.close()
-        f = open(data_folder + '/relations.dict', 'r')
-        f2 = open(model_folder + '/relations.dict', 'w')
-        rels = {}
-        idx2rel = {}
-        for line in f:
-            line = line.strip().split('\t')
-            name = line[0]
-            id = int(line[1])
-            rels[name] = id
-            idx2rel[id] = name
-            f2.write(str(id) + '\t' + name + '\n')
-        f.close()
-        f2.close()
+        model_folder = os.path.join(self.data_loader.base_data_dir, f"{self.model_name}_{self.dataset}")
+        torch.save(model.state_dict(), model_folder)
 
     def validation_step(self, model, best_valid):
         model.eval()
@@ -204,8 +148,7 @@ class EmbeddingGenerator:
                 best_test = test
                 print('Validation MRR increased.')
                 print('Saving model...')
-                # TODO: save embeddings
-                # self.write_embedding_files(model)
+                self.write_embedding_files(model)
                 print('Model saved!')
 
             print('Best valid:', best_valid)
@@ -253,7 +196,7 @@ class EmbeddingGenerator:
 
         if self.load_from != '':
             fname = self.load_from
-            checkpoint = torch.load(fname)
+            checkpoint = torch.load(os.path.join(self.data_loader.base_data_dir, fname))
             model.load_state_dict(checkpoint)
         if self.cuda:
             model.cuda()

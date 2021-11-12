@@ -1,8 +1,8 @@
 has_tags	0
-in_language	1
-has_genre	2
-written_by	3
+release_year	1
+starred_actors	2
+directed_by	3
 has_imdb_rating	4
-directed_by	5
-release_year	6
-starred_actors	7
+written_by	5
+has_genre	6
+in_language	7
