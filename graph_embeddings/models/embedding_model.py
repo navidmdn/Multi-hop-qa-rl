@@ -22,6 +22,8 @@ class EmbeddingModel(torch.nn.Module):
             self.bce_loss_loss = torch.nn.BCELoss()
         elif self.loss_type == 'CE':
             self.loss = self.ce_loss
+        elif self.loss_type == 'BCELOG':
+            self.loss = torch.nn.BCEWithLogitsLoss()
         else:
             raise NotImplementedError(f'Incorrect loss specified: {self.loss_type}')
 
