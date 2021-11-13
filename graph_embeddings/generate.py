@@ -301,7 +301,7 @@ if __name__ == '__main__':
                         help="Amount of label smoothing.")
     parser.add_argument("--valid_steps", type=int, default=1, nargs="?",
                         help="Epochs before u validate")
-    parser.add_argument("--loss_type", type=str, default='BCE', nargs="?",
+    parser.add_argument("--loss_type", type=str, default='CE', nargs="?",
                         help="Loss type")
     parser.add_argument("--do_batch_norm", type=int, default=1, nargs="?",
                         help="Do batch norm or not (0, 1)")

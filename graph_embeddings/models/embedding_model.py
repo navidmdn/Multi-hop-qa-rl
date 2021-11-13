@@ -22,8 +22,6 @@ class EmbeddingModel(torch.nn.Module):
             self.bce_loss_loss = torch.nn.BCELoss()
         elif self.loss_type == 'CE':
             self.loss = self.ce_loss
-        elif self.loss_type == 'BCELOG':
-            self.loss = torch.nn.BCEWithLogitsLoss()
         else:
             raise NotImplementedError(f'Incorrect loss specified: {self.loss_type}')
 
@@ -43,8 +41,8 @@ class EmbeddingModel(torch.nn.Module):
         return torch.nn.Embedding(len(self.data_loader.entities), self.entity_dim * self.multiplier, padding_idx=0)
 
     def ce_loss(self, pred, true):
-        pred = F.log_softmax(pred, dim=-1)
-        true = true / true.size(-1)
+        pred = F.softmax(pred, dim=-1)
+        true = true / torch.sum(true, dim=0)
         loss = -torch.sum(pred * true)
         return loss
 
