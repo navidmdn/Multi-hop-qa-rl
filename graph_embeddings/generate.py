@@ -37,7 +37,7 @@ class EmbeddingGenerator:
         self.load_from = load_from
         self.tb_logger = SummaryWriter(
             comment=f"{self.dataset}-{self.model_name}_l3{self.l3_reg}_lr{self.learning_rate}_lrdecay{self.decay_rate}"
-                    f"_batchsize{self.batch_size}_entdim{self.ent_vec_dim}_reldim{self.rel_vec_dim}"
+                    f"_batchsize{self.batch_size}_entdim{self.ent_vec_dim}_reldim{self.rel_vec_dim}_losstype({self.loss_type})"
         )
 
         if do_batch_norm == 1:

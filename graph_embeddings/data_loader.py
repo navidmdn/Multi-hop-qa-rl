@@ -1,4 +1,6 @@
 from os.path import join, abspath, dirname
+import networkx as nx
+import pickle
 
 
 class DataLoader:
@@ -47,6 +49,25 @@ class DataLoader:
             for key, value in self.relation_idxs.items():
                 f.write(key + '\t' + str(value) + '\n')
 
+    def load_entity_relations_vocab(self):
+        entities = {}
+        relations = {}
+
+        with open(join(self.data_dir, 'entities.dict'), 'r') as f:
+            entities_txt = f.read().strip().split('\n')
+            for line in entities_txt:
+                line = line.split('\t')
+                entity, idx = line[0], line[1]
+                entities[entity] = int(idx)
+
+        with open(join(self.data_dir, 'relations.dict'), 'r') as f:
+            relations_txt = f.read().strip().split('\n')
+            for line in relations_txt:
+                line = line.split('\t')
+                rel, idx = line[0], line[1]
+                relations[rel] = int(idx)
+
+        return entities, relations
 
     def get_relations(self, data):
         relations = sorted(list(set([d[1] for d in data])))
@@ -55,3 +76,26 @@ class DataLoader:
     def get_entities(self, data):
         entities = sorted(list(set([d[0] for d in data]+[d[2] for d in data])))
         return entities
+
+    def build_graph(self, save_path=None):
+        graph = nx.DiGraph()
+
+        entities_voc, relations_voc = self.load_entity_relations_vocab()
+
+        for triple in self.data:
+            n1, n2 = entities_voc[triple[0]], entities_voc[triple[2]]
+            e = relations_voc[triple[1]]
+
+            graph.add_nodes_from([
+                (n1, {"entity_text": triple[0]}),
+                (n2, {"entity_text": triple[1]})
+            ])
+
+            graph.add_edge(n1, n2, relation_id=e, relation_text=triple[1])
+
+        if save_path:
+            with open(join(self.data_dir, 'graph.pickle'), 'wb') as f:
+                pickle.dump(graph, f)
+
+        return graph
+
