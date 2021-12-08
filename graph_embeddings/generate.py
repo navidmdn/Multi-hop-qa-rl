@@ -19,7 +19,7 @@ class EmbeddingGenerator:
                  num_iterations=500, batch_size=128, decay_rate=0., cuda=False,
                  input_dropout=0.3, hidden_dropout1=0.4, hidden_dropout2=0.5,
                  label_smoothing=0., valid_steps=1, loss_type='BCE', do_batch_norm=1,
-                 model='TuckER', l3_reg=0.0, load_from=''):
+                 model='TuckER', l3_reg=0.0, load_from='', output_model_name='default'):
         self.dataset = dataset
 
         self.learning_rate = learning_rate
@@ -35,6 +35,8 @@ class EmbeddingGenerator:
         self.l3_reg = l3_reg
         self.loss_type = loss_type
         self.load_from = load_from
+        self.output_model_name = output_model_name
+
         self.tb_logger = SummaryWriter(
             comment=f"{self.dataset}-{self.model_name}_l3{self.l3_reg}_lr{self.learning_rate}_lrdecay{self.decay_rate}"
                     f"_batchsize{self.batch_size}_entdim{self.ent_vec_dim}_reldim{self.rel_vec_dim}_losstype({self.loss_type})"
@@ -309,6 +311,8 @@ if __name__ == '__main__':
                         help="l3 reg hyperparameter")
     parser.add_argument("--load_from", type=str, default='', nargs="?",
                         help="load from state dict")
+    parser.add_argument("--output_model_name", type=str, default='default', nargs="?",
+                        help="name of the saved model")
 
     args = parser.parse_args()
     torch.backends.cudnn.deterministic = True
@@ -331,6 +335,6 @@ if __name__ == '__main__':
         input_dropout=args.input_dropout, hidden_dropout1=args.hidden_dropout1,
         hidden_dropout2=args.hidden_dropout2, label_smoothing=args.label_smoothing,
         valid_steps=args.valid_steps, loss_type=args.loss_type, do_batch_norm=args.do_batch_norm,
-        model=args.model, l3_reg=args.l3_reg, load_from=args.load_from
+        model=args.model, l3_reg=args.l3_reg, load_from=args.load_from, output_model_name=args.output_model_name
     )
     embedding_generator.train_and_eval()
