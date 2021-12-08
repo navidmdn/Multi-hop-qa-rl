@@ -20,6 +20,10 @@ class DataLoader:
         self.valid_triples = self.load_triples("valid", reverse_rel=reverse_rel)
         self.test_triples = self.load_triples("test", reverse_rel=reverse_rel)
         self.data = self.train_triples + self.valid_triples + self.test_triples
+
+        #TODO: to boost qa task
+        self.train_triples = self.train_triples + self.valid_triples + self.test_triples
+
         self.entities = self.get_entities(self.data)
         self.train_relations = self.get_relations(self.train_triples)
         self.valid_relations = self.get_relations(self.valid_triples)
